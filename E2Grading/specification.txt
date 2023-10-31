@@ -1,0 +1,21 @@
+KDLP proc module
+
+This module will create an entry in `/proc` that holds a fixed message for all to read.
+
+The file will show up in `/proc` as a file named `kdlp`
+The fill will be owned by `root:root`
+The permissions for the file will be `0444`
+
+Operations:
+	- Read:
+		Reading copies data into the user buffer. The amount of data copied is the minimum between the count argument passed
+		and the amount of data between the current file position and the end of the file. The value returned will be the number of bytes copied.
+		The contents of the file are the string "Hello from the $STUDENT's proc entry\n"
+		If the pointer passed for the buffer is invalid, EFAULT will be returned
+	- Write:
+		Writing is not allowed, attempting to write into the file will result in an -EPERM error.
+	- Seek:
+		The file position can be adjusted by seeeking. Only the seek set and seek cur operations are supported, not seek end.
+		If the resulting file position would be negative or if the SEEK_END operation is attempted, -EINVAL will be returned,
+		otherwise, the resulting file position is returned.
+
