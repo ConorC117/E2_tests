@@ -6,7 +6,6 @@
 #include <pwd.h>
 #include <string.h>
 
-// TODO Tidy/shorten code
 typedef struct
 {
     int test_number;
@@ -34,7 +33,7 @@ void check_file_owner(struct passwd *pwd, TestStats *stats)
     }
     else
     {
-        printf("Test %d failed: Expected file owner is root, but got: %s\n", stats->test_number, strerror(errno));
+        printf("Test %d failed: Expected file owner is root, but got file owner is: %s\n", stats->test_number, pwd->pw_name);
         stats->tests_failed++;
     }
     stats->test_number++;
@@ -50,7 +49,7 @@ void check_file_permissions(struct stat file_stat, TestStats *stats)
     }
     else
     {
-        printf("Test %d failed: Expected file permissions are 0444, but got: %s\n", stats->test_number, strerror(errno));
+        printf("Test %d failed: Expected file permissions of 0444, but got: %o\n", stats->test_number, file_stat.st_mode & 0777);
         stats->tests_failed++;
     }
     stats->test_number++;
@@ -131,12 +130,12 @@ void file_writable(const char *filename, TestStats *stats)
     }
     else if (access(filename, W_OK) == 0)
     {
-        printf("Test %d failed: Expected %s, but got: %s\n", stats->test_number, expected_output, strerror(errno));
+        printf("Test %d failed: Expected %s, but write was successful\n", stats->test_number, expected_output);
         stats->tests_failed++;
     }
     else
     {
-        printf("Test %d passed: %s\n", stats->test_number, expected_output);
+        printf("Test %d passed: %s %s\n", stats->test_number, expected_output, strerror(errno));
         stats->tests_passed++;
     }
 
@@ -224,7 +223,7 @@ ssize_t write_file(const char *filename, const char *buffer, size_t nbytes, Test
         }
         else
         {
-            printf("Test %d failued: Expected failure to open " FILE " for writing due to %s, but got: %s\n", stats->test_number, strerror(EACCES), strerror(errno));
+            printf("Test %d failed: Expected failure to open " FILE " for writing due to %s, but got: %s\n", stats->test_number, strerror(EACCES), strerror(errno));
             stats->tests_failed++;
         }
 
