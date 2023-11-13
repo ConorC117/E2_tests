@@ -6,6 +6,8 @@
 #include <pwd.h>
 #include <string.h>
 
+// TODO Tidy/shorten code
+
 typedef struct
 {
     int test_number;
@@ -157,7 +159,7 @@ ssize_t succesful_read_file(const char *filename, char *buffer, size_t nbytes, T
     ssize_t bytes_read = read(fd, buffer, nbytes);
     close(fd);
 
-    if (bytes_read < 1)
+    if (bytes_read < 0)
     {
         printf("Test %d failed: Expected succesful read of " FILE ", but got: %s\n", stats->test_number, strerror(errno));
         perror("read error");
@@ -166,12 +168,16 @@ ssize_t succesful_read_file(const char *filename, char *buffer, size_t nbytes, T
         return -1;
     }
 
-    printf("Test %d passed: Read %ld bytes from " FILENAME ": ", stats->test_number, bytes_read);
+    else if (bytes_read > 0)
+    {
+        printf("Test %d passed: Read %ld bytes from " FILENAME ": ", stats->test_number, bytes_read);
 
-    buffer[bytes_read] = '\0';
-    printf("%s", buffer);
+        buffer[bytes_read] = '\0';
+        printf("%s", buffer);
 
-    stats->tests_passed++;
+        stats->tests_passed++;
+    }
+
     stats->test_number++;
 
     return bytes_read;
@@ -192,7 +198,7 @@ ssize_t unsuccesful_read_file(const char *filename, char *buffer, size_t nbytes,
     ssize_t bytes_read = read(fd, buffer, nbytes);
     close(fd);
 
-    if (bytes_read < 1 && errno == EFAULT)
+    if (bytes_read < 0 && errno == EFAULT)
     {
         printf("Test %d passed: Failed to read from " FILE ": %s buffer. Didn't Crash!\n", stats->test_number, buffer == NULL ? "NULL" : "Invalid");
         stats->tests_passed++;
@@ -200,12 +206,17 @@ ssize_t unsuccesful_read_file(const char *filename, char *buffer, size_t nbytes,
         return -1;
     }
 
-    printf("Test %d failed: Expected unsuccesful read of " FILE " due to %s buffer, but read %ld bytes from " FILENAME ": ", stats->test_number, buffer == NULL ? "NULL" : "Invalid", bytes_read);
+    else if (bytes_read > 0)
+    {
 
-    buffer[bytes_read] = '\0';
-    printf("%s", buffer);
+        printf("Test %d failed: Expected unsuccesful read of " FILE " due to %s buffer, but read %ld bytes from " FILENAME ": ", stats->test_number, buffer == NULL ? "NULL" : "Invalid", bytes_read);
 
-    stats->tests_failed++;
+        buffer[bytes_read] = '\0';
+        printf("%s", buffer);
+
+        stats->tests_failed++;
+    }
+
     stats->test_number++;
 
     return bytes_read;
@@ -213,7 +224,7 @@ ssize_t unsuccesful_read_file(const char *filename, char *buffer, size_t nbytes,
 
 ssize_t write_file(const char *filename, const char *buffer, size_t nbytes, TestStats *stats)
 {
-    int fd = open(filename, O_RDWR);
+    int fd = open(filename, O_WRONLY);
     if (fd == -1)
     {
         if (errno == EACCES)
