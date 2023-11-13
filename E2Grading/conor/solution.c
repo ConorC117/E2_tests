@@ -14,7 +14,7 @@ typedef struct
 } TestStats;
 
 // TODO check name for every student submission and adjust accordingly
-#define FILENAME "./test.txt"
+#define FILENAME "/proc/kdlp"
 #define FILE "file " FILENAME ""
 
 void print_test_summary(TestStats *stats)
