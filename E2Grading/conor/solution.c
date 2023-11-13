@@ -14,7 +14,7 @@ typedef struct
 } TestStats;
 
 // TODO check name for every student submission and adjust accordingly
-#define FILENAME "/proc/kdlp"
+#define FILENAME "./test.txt"
 #define FILE "file " FILENAME ""
 
 void print_test_summary(TestStats *stats)
@@ -135,7 +135,7 @@ void file_writable(const char *filename, TestStats *stats)
     }
     else
     {
-        printf("Test %d passed: %s %s\n", stats->test_number, expected_output, strerror(errno));
+        printf("Test %d passed: %s : %s\n", stats->test_number, expected_output, strerror(errno));
         stats->tests_passed++;
     }
 
