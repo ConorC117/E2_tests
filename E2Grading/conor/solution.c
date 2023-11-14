@@ -16,6 +16,7 @@ typedef struct
 } TestStats;
 
 // TODO check name for every student submission and adjust accordingly
+//#define FILENAME "./test.txt"
 #define FILENAME "/proc/kdlp"
 #define FILE "file " FILENAME ""
 
@@ -33,27 +34,30 @@ void check_file_owner(struct passwd *pwd, TestStats *stats)
         printf("Test %d passed: File owner is root as expected\n", stats->test_number);
         stats->tests_passed++;
     }
+
     else
     {
         printf("Test %d failed: Expected file owner is root, but got file owner is: %s\n", stats->test_number, pwd->pw_name);
         stats->tests_failed++;
     }
+
     stats->test_number++;
 }
 
 void check_file_permissions(struct stat file_stat, TestStats *stats)
 {
-
     if ((file_stat.st_mode & 0777) == 0444)
     {
         printf("Test %d passed: File has 0444 permissions as expected\n", stats->test_number);
         stats->tests_passed++;
     }
+
     else
     {
         printf("Test %d failed: Expected file permissions of 0444, but got: %o\n", stats->test_number, file_stat.st_mode & 0777);
         stats->tests_failed++;
     }
+
     stats->test_number++;
 }
 
@@ -76,7 +80,6 @@ void get_file_info(const char *file_name, TestStats *stats)
     }
 
     pwd = getpwuid(file_stat.st_uid);
-
     printf("File Name: %s\n", file_name);
 
     check_file_owner(pwd, stats);
@@ -92,6 +95,7 @@ void file_exists(const char *filename, TestStats *stats)
         printf("Test %d passed: %s\n", stats->test_number, expected_output);
         stats->tests_passed++;
     }
+
     else
     {
         printf("Test %d failed: Expected %s, but got: %s\n", stats->test_number, expected_output, strerror(errno));
@@ -103,15 +107,14 @@ void file_exists(const char *filename, TestStats *stats)
 
 void file_readable(const char *filename, TestStats *stats)
 {
-
     char expected_output[4100] = FILE " has read permissions";
 
     if (access(filename, R_OK) == 0)
     {
-
         printf("Test %d passed: %s\n", stats->test_number, expected_output);
         stats->tests_passed++;
     }
+
     else
     {
         printf("Test %d failed: Expected %s, but got: %s\n", stats->test_number, expected_output, strerror(errno));
@@ -130,14 +133,16 @@ void file_writable(const char *filename, TestStats *stats)
         printf("Test %d failed: Expected %s, but got: %s\n", stats->test_number, expected_output, strerror(errno));
         stats->tests_failed++;
     }
+
     else if (access(filename, W_OK) == 0)
     {
-        printf("Test %d failed: Expected %s, but write was successful\n", stats->test_number, expected_output);
+        printf("Test %d failed: Expected %s, but file has write permissions\n", stats->test_number, expected_output);
         stats->tests_failed++;
     }
+
     else
     {
-        printf("Test %d passed: %s : %s\n", stats->test_number, expected_output, strerror(errno));
+        printf("Test %d passed: %s\n", stats->test_number, expected_output);
         stats->tests_passed++;
     }
 
@@ -146,7 +151,6 @@ void file_writable(const char *filename, TestStats *stats)
 
 ssize_t succesful_read_file(const char *filename, char *buffer, size_t nbytes, TestStats *stats)
 {
-
     int fd = open(filename, O_RDONLY);
     if (fd == -1)
     {
@@ -159,19 +163,15 @@ ssize_t succesful_read_file(const char *filename, char *buffer, size_t nbytes, T
     ssize_t bytes_read = read(fd, buffer, nbytes);
     close(fd);
 
-    if (bytes_read < 0)
+    if (bytes_read == -1)
     {
         printf("Test %d failed: Expected succesful read of " FILE ", but got: %s\n", stats->test_number, strerror(errno));
-        perror("read error");
         stats->tests_failed++;
-        stats->test_number++;
-        return -1;
     }
 
-    else if (bytes_read > 0)
+    else if (bytes_read >= 0)
     {
         printf("Test %d passed: Read %ld bytes from " FILENAME ": ", stats->test_number, bytes_read);
-
         buffer[bytes_read] = '\0';
         printf("%s", buffer);
 
@@ -185,7 +185,6 @@ ssize_t succesful_read_file(const char *filename, char *buffer, size_t nbytes, T
 
 ssize_t unsuccesful_read_file(const char *filename, char *buffer, size_t nbytes, TestStats *stats)
 {
-
     int fd = open(filename, O_RDONLY);
     if (fd == -1)
     {
@@ -198,19 +197,23 @@ ssize_t unsuccesful_read_file(const char *filename, char *buffer, size_t nbytes,
     ssize_t bytes_read = read(fd, buffer, nbytes);
     close(fd);
 
-    if (bytes_read < 0 && errno == EFAULT)
+    if (bytes_read == -1)
     {
-        printf("Test %d passed: Failed to read from " FILE ": %s buffer. Didn't Crash!\n", stats->test_number, buffer == NULL ? "NULL" : "Invalid");
-        stats->tests_passed++;
-        stats->test_number++;
-        return -1;
+        if (errno == EFAULT)
+        {
+            printf("Test %d passed: Failed to read from " FILE ": %s buffer. Didn't Crash!\n", stats->test_number, buffer == NULL ? "NULL" : "Invalid");
+            stats->tests_passed++;
+        }
+        else
+        {
+            printf("Test %d failed: Expected EFAULT when reading " FILE " with %s buffer, but got: %s\n", stats->test_number, buffer == NULL ? "NULL" : "Invalid", strerror(errno));
+            stats->tests_failed++;
+        }
     }
 
-    else if (bytes_read > 0)
+    else if (bytes_read >= 0)
     {
-
         printf("Test %d failed: Expected unsuccesful read of " FILE " due to %s buffer, but read %ld bytes from " FILENAME ": ", stats->test_number, buffer == NULL ? "NULL" : "Invalid", bytes_read);
-
         buffer[bytes_read] = '\0';
         printf("%s", buffer);
 
@@ -234,35 +237,49 @@ ssize_t write_file(const char *filename, const char *buffer, size_t nbytes, Test
         }
         else
         {
-            printf("Test %d failed: Expected failure to open " FILE " for writing due to %s, but got: %s\n", stats->test_number, strerror(EACCES), strerror(errno));
+            printf("Test %d failed: Expected failure to open " FILE " for writing due to EACCESS, but got: %s\n", stats->test_number, strerror(errno));
             stats->tests_failed++;
         }
 
         stats->test_number++;
-    }
-
-    ssize_t bytes_write = write(fd, buffer, nbytes);
-    close(fd);
-
-    if (bytes_write < 1 && errno == EPERM)
-    {
-        printf("Test %d passed: Failed to write " FILE ": %s\n", stats->test_number, strerror(errno));
-        stats->tests_passed++;
-        stats->test_number++;
         return -1;
     }
 
-    return bytes_write;
+    ssize_t bytes_writen = write(fd, buffer, nbytes);
+    close(fd);
+
+    if (bytes_writen == -1)
+    {
+        if (errno == EPERM)
+        {
+            printf("Test %d passed: Failed to write to " FILE ": %s\n", stats->test_number, strerror(errno));
+            stats->tests_passed++;
+        }
+        else
+        {
+            printf("Test %d failed: Expected failure to write to " FILE " due to EPERM, but got: %s\n", stats->test_number, strerror(errno));
+            stats->tests_failed++;
+        }
+    }
+
+    if (bytes_writen > 0)
+    {
+        printf("Test %d failed: Expected failure to write to " FILE " but write succeeded\n", stats->test_number);
+        stats->tests_failed++;
+    }
+
+    stats->test_number++;
+
+    return bytes_writen;
 }
 
 int seek(const char *filename, off_t offset, int whence, TestStats *stats)
 {
-
     int fd = open(filename, O_RDONLY);
     if (fd == -1)
     {
-        printf("Test %d failed: Tried to move " FILE " offset with %s and offset value of %ld, but got: %s\n", stats->test_number, (whence == SEEK_SET) ? "SEEK_SET" : (whence == SEEK_CUR) ? "SEEK_CUR"
-                                                                                                                                                                                            : "SEEK_END",
+        printf("Test %d failed: Tried to move " FILE " offset with %s and offset %ld, but got: %s\n", stats->test_number, (whence == SEEK_SET) ? "SEEK_SET" : (whence == SEEK_CUR) ? "SEEK_CUR"
+                                                                                                                                                                                   : "SEEK_END",
                offset, strerror(errno));
 
         stats->tests_failed++;
@@ -270,41 +287,44 @@ int seek(const char *filename, off_t offset, int whence, TestStats *stats)
         return -1;
     }
 
+    int starting_position = lseek(fd, 0, SEEK_CUR);
+    int expected_position = starting_position + offset;
     int new_position = lseek(fd, offset, whence);
+
     close(fd);
 
-    if ((whence == SEEK_CUR || whence == SEEK_SET) && offset > 0)
+    if (whence == SEEK_CUR || whence == SEEK_SET)
     {
-
-        if (new_position < 0)
+        if (errno == EINVAL && expected_position < 0)
         {
-            printf("Test %d failed: Expected successful move of " FILE " offset with %s and offset value of %ld, but got: %s\n", stats->test_number, (whence == SEEK_SET) ? "SEEK_SET" : "SEEK_CUR", offset, strerror(errno));
-            stats->tests_failed++;
-            stats->test_number++;
-            return -1;
+            printf("Test %d passed: Failed to move " FILE " position with %s and offset %ld as file position would be negative(%d): %s\n", stats->test_number, (whence == SEEK_SET) ? "SEEK_SET" : ((whence == SEEK_CUR) ? "SEEK_CUR" : "SEEK_END"),
+                   offset, expected_position, strerror(errno));
+            stats->tests_passed++;
         }
-
-        if (new_position == offset)
+        else if (new_position == -1)
         {
-            printf("Test %d passed: Successfully moved " FILE " offset with %s and offset value of %ld\n", stats->test_number, (whence == SEEK_SET) ? "SEEK_SET" : "SEEK_CUR", offset);
+            printf("Test %d failed: Tried to move " FILE " position with %s and offset %ld, but got: %s\n", stats->test_number, (whence == SEEK_SET) ? "SEEK_SET" : ((whence == SEEK_CUR) ? "SEEK_CUR" : "SEEK_END"),
+                   offset, strerror(errno));
+            stats->tests_failed++;
+        }
+        else
+        {
+            printf("Test %d passed: Successfully moved " FILE " position with %s and offset %ld\n", stats->test_number, (whence == SEEK_SET) ? "SEEK_SET" : ((whence == SEEK_CUR) ? "SEEK_CUR" : "SEEK_END"),
+                   offset);
             stats->tests_passed++;
         }
     }
 
-    else if (whence == SEEK_END || offset < 0)
+    if (whence == SEEK_END)
     {
-
-        if (new_position < 0)
+        if (new_position == -1)
         {
-            printf("Test %d passed: Failed to change " FILE " offset with %s and offset value of %ld: %s\n", stats->test_number, (whence == SEEK_END) ? "SEEK_END" : "negative offset", offset, strerror(errno));
+            printf("Test %d passed: Failed to change " FILE " position with unsupported %s and offset %ld: %s\n", stats->test_number, (whence == SEEK_END) ? "SEEK_END" : "negative offset", offset, strerror(errno));
             stats->tests_passed++;
-            stats->test_number++;
-            return -1;
         }
-
-        if (new_position > 0)
+        else
         {
-            printf("Test %d failed: Expected unsuccessful move of " FILE " offset with %s and offset value of %ld, but offset was moved\n", stats->test_number, (whence == SEEK_END) ? "SEEK_END" : "negative offset", offset);
+            printf("Test %d failed: Expected unsuccessful move of " FILE " position with %s and offset %ld, but offset was moved\n", stats->test_number, (whence == SEEK_END) ? "SEEK_END" : "negative offset", offset);
             stats->tests_failed++;
         }
     }
@@ -330,7 +350,6 @@ int main(void)
     file_readable(filename, &stats);
     file_writable(filename, &stats); // should pass on fail
 
-    // TODO: Merge to reduce redundancy
     succesful_read_file(filename, buffer, sizeof(buffer), &stats);
     unsuccesful_read_file(filename, null_buffer, sizeof(null_buffer), &stats);       // should pass on fail but not crash
     unsuccesful_read_file(filename, invalid_buffer, sizeof(invalid_buffer), &stats); // should pass on fail but not crash
@@ -339,10 +358,11 @@ int main(void)
 
     seek(filename, 5, SEEK_CUR, &stats);
     seek(filename, 5, SEEK_SET, &stats);
-    seek(filename, 5, SEEK_END, &stats);  // should pass on fail
-    seek(filename, -5, SEEK_CUR, &stats); // should pass on fail
-    seek(filename, -5, SEEK_SET, &stats); // should pass on fail
-    seek(filename, -5, SEEK_END, &stats); // should pass on fail
+    seek(filename, 5, SEEK_END, &stats);    // should pass on fail
+    seek(filename, -5, SEEK_CUR, &stats);   // should pass on fail
+    seek(filename, -5, SEEK_SET, &stats);   // should pass on fail
+    seek(filename, -5, SEEK_END, &stats);   // should pass on fail
+    seek(filename, -100, SEEK_END, &stats); // should pass on fail
 
     print_test_summary(&stats);
 
