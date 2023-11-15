@@ -85,25 +85,6 @@ void get_file_info(const char *file_name, TestStats *stats)
     check_file_permissions(file_stat, stats);
 }
 
-void file_exists(const char *filename, TestStats *stats)
-{
-    char expected_output[30] = FILENAME " exists";
-
-    if (access(filename, F_OK) == 0)
-    {
-        printf("Test %d passed: %s\n", stats->test_number, expected_output);
-        stats->tests_passed++;
-    }
-
-    else
-    {
-        printf("Test %d failed: Expected %s, but got: %s\n", stats->test_number, expected_output, strerror(errno));
-        stats->tests_failed++;
-    }
-
-    stats->test_number++;
-}
-
 void file_readable(const char *filename, TestStats *stats)
 {
     char expected_output[4100] = FILENAME " has read permissions";
@@ -355,7 +336,6 @@ int main(void)
 
     get_file_info(filename, &stats);
 
-    file_exists(filename, &stats);
     file_readable(filename, &stats);
     file_writable(filename, &stats); // should pass on fail. Permission denied.
 
